@@ -40,9 +40,7 @@ class WgQuickBackend(context: Context) : Backend {
     @Throws(Exception::class)
     override fun getVersion(): String {
         val output = ArrayList<String>()
-        if (Application.rootShell
-                .run(output, "cat /sys/module/wireguard/version") != 0 || output.isEmpty()
-        )
+        if (Application.rootShell.run("cat /sys/module/wireguard/version", output) != 0 || output.isEmpty())
             throw Exception("Unable to determine kernel module version")
         return output[0]
     }
@@ -72,7 +70,7 @@ class WgQuickBackend(context: Context) : Backend {
         // Don't throw an exception here or nothing will show up in the UI.
         try {
             Application.toolsInstaller.ensureToolsAvailable()
-            if (Application.rootShell.run(output, "wg show interfaces") != 0 || output.isEmpty())
+            if (Application.rootShell.run("wg show interfaces", output) != 0 || output.isEmpty())
                 return emptySet()
         } catch (e: Exception) {
             Timber.tag(TAG).w(e, "Unable to enumerate running tunnels")
@@ -120,7 +118,7 @@ class WgQuickBackend(context: Context) : Backend {
         )
         if (state == State.UP)
             command = "cat /sys/module/wireguard/version && $command"
-        val result = Application.rootShell.run(null, command)
+        val result = Application.rootShell.run(command)
 
         tempFile.delete()
         when (result) {
@@ -134,7 +132,7 @@ class WgQuickBackend(context: Context) : Backend {
             return
         if (state == State.UP) {
             val intent = Intent(cachedContext, MainActivity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK
+            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TASK and Intent.FLAG_ACTIVITY_NEW_TASK
             val pendingIntent = PendingIntent.getActivity(cachedContext, 0, intent, 0)
             val builder = NotificationCompat.Builder(
                 cachedContext,

@@ -17,6 +17,8 @@ import android.os.Looper
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.preference.PreferenceManager
+import com.topjohnwu.superuser.ContainerApp
+import com.topjohnwu.superuser.Shell
 import com.wireguard.android.backend.Backend
 import com.wireguard.android.backend.GoBackend
 import com.wireguard.android.backend.WgQuickBackend
@@ -29,9 +31,10 @@ import com.wireguard.android.util.ToolsInstaller
 import java9.util.concurrent.CompletableFuture
 import timber.log.Timber
 import java.io.File
+import java.io.IOException
 import java.lang.ref.WeakReference
 
-class Application : android.app.Application() {
+class Application : ContainerApp() {
     private lateinit var asyncWorker: AsyncWorker
     private lateinit var rootShell: RootShell
     private val sharedPreferences: SharedPreferences by lazy {
@@ -75,6 +78,10 @@ class Application : android.app.Application() {
     override fun onCreate() {
         super.onCreate()
 
+        Shell.Config.setFlags(Shell.FLAG_REDIRECT_STDERR and Shell.ROOT_SHELL)
+        Shell.Config.verboseLogging(BuildConfig.DEBUG)
+        Shell.Config.setInitializer(ShellInitializer::class.java)
+
         if (BuildConfig.DEBUG)
             Timber.plant(Timber.DebugTree())
 
@@ -100,6 +107,22 @@ class Application : android.app.Application() {
             createNotificationChannel()
     }
 
+    internal inner class ShellInitializer : Shell.Initializer() {
+        override fun onInit(context: Context, shell: Shell): Boolean {
+            try {
+                shell.newJob()
+                    .add("LC_ALL=C")
+                    .add("export PATH=$localBinaryDir:\$PATH")
+                    .add("CALLING_PACKAGE=${BuildConfig.APPLICATION_ID}")
+                    .add("TMPDIR=${localTemporaryDir.absolutePath}")
+                    .exec()
+            } catch (e: IOException) {
+                return false
+            }
+            return true
+        }
+    }
+
     companion object {
 
         private lateinit var weakSelf: WeakReference<Application>
@@ -109,6 +132,9 @@ class Application : android.app.Application() {
         val sharedPreferences by lazy { get().sharedPreferences }
         val toolsInstaller by lazy { get().toolsInstaller }
         val tunnelManager by lazy { get().tunnelManager }
+        private val cacheDir by lazy { get().applicationContext.cacheDir }
+        val localBinaryDir by lazy { File(cacheDir, "bin") }
+        val localTemporaryDir by lazy { File(cacheDir, "tmp") }
 
         fun get(): Application {
             return weakSelf.get() as Application

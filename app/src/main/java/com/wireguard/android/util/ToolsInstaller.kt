@@ -44,7 +44,7 @@ class ToolsInstaller(context: Context) {
         }
         script.append("exit ").append(OsConstants.EALREADY).append(';')
         return try {
-            val ret = Application.rootShell.run(null, script.toString())
+            val ret = Application.rootShell.run(script.toString())
             if (ret == OsConstants.EALREADY) {
                 if (willInstallAsMagiskModule()) YES or MAGISK else YES or SYSTEM
             } else {
@@ -85,7 +85,6 @@ class ToolsInstaller(context: Context) {
             if (installAsMagiskModule == null) {
                 installAsMagiskModule = try {
                     Application.rootShell.run(
-                        null,
                         "[ -d /sbin/.core/mirror -a -d /sbin/.core/img -a ! -f /cache/.disable_magisk ]"
                     ) == OsConstants.EXIT_SUCCESS
                 } catch (ignored: Exception) {
@@ -112,7 +111,7 @@ class ToolsInstaller(context: Context) {
             )
         }
         return try {
-            if (Application.rootShell.run(null, script.toString()) == 0) YES or SYSTEM else ERROR
+            if (Application.rootShell.run(script.toString()) == 0) YES or SYSTEM else ERROR
         } catch (ignored: IOException) {
             ERROR
         }
@@ -149,7 +148,7 @@ class ToolsInstaller(context: Context) {
         script.append("trap - INT TERM EXIT;")
 
         return try {
-            if (Application.rootShell.run(null, script.toString()) == 0) YES or MAGISK else ERROR
+            if (Application.rootShell.run(script.toString()) == 0) YES or MAGISK else ERROR
         } catch (ignored: IOException) {
             ERROR
         }
@@ -186,7 +185,7 @@ class ToolsInstaller(context: Context) {
         script.append("exit ").append(OsConstants.EXIT_SUCCESS).append(';')
 
         return try {
-            Application.rootShell.run(null, script.toString())
+            Application.rootShell.run(script.toString())
         } catch (ignored: IOException) {
             OsConstants.EXIT_FAILURE
         }
